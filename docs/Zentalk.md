@@ -3,7 +3,7 @@
 **Zentalk** is a small set of programs that makes it easy to monitor and make use data from Zenbot without interupting its operation.
 Most notably this is the start options, trades, periods and a lot more. The most important parts are the **talker** program
 that enables *websockets* (*WS*) on **Zenbot** and some client programs to make use of the data from **Zenbot**.
-The two programs are **zentalk**, **zenmailer**, **zenxmpp** and **zenout**. The first one is a fullblown *websocket* CLI program to inspect the data from **Zenbot**.
+The programs are **zentalk**, **zenmailer**, **zenxmpp** and **zenout**. The first one is a fullblown *websocket* CLI program to inspect the data from **Zenbot**.
 The other programs are lightweight *websocket* streaming clients which can *subscribe* to data objects from **Zenbot** 
 for use in other programs.  With **zenout** as an example one can do some simple node programming to use the output as anything thinkable.
 Here are some examples:
