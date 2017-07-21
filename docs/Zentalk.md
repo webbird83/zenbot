@@ -1,11 +1,11 @@
-## The Zentalk concept
+## The Zentalk Concept
 
 **Zentalk** is a small set of programs that makes it easy to monitor and make use data from Zenbot without interupting its operation.
 Most notably this is the start options, trades, periods and a lot more. The most important parts are the **talker** program
-that enables *websockets* (*WS*) on **Zenbot** and two client programs to make use of the data from **Zenbot**.
-The two programs are **zentalk** and **zenout**. The first one is a fullblown *websocket* CLI program to inspect the data from **Zenbot**.
-The other one is a lightweight *websocket* streaming client which can *subscribe* to data objects from **Zenbot** for use in other programs.
-With **zenout** as an example one can do some simple node programming to use the output as anything thinkable.
+that enables *websockets* (*WS*) on **Zenbot** and some client programs to make use of the data from **Zenbot**.
+The two programs are **zentalk**, **zenmailer**, **zenxmpp* and **zenout**. The first one is a fullblown *websocket* CLI program to inspect the data from **Zenbot**.
+The other programs are lightweight *websocket* streaming clients which can *subscribe* to data objects from **Zenbot** 
+for use in other programs.  With **zenout** as an example one can do some simple node programming to use the output as anything thinkable.
 Here are some examples:
 
  - a *messaging bot* which can send trading events
@@ -13,13 +13,13 @@ Here are some examples:
  - producing data for a web front end
  - and a lot of other stuff
 
-In the **zenmailer** and **zenxmpp** program, the commenting should show how to implement other types of messaging 
+In the **zenmailer** and **zenxmpp** program, the commenting shows how to implement other types of messaging 
 (or other functions)
 
 
 ### talker
 
-The **talker** program is a leightweight *websocket* server loosely connected to **Zenbot**.
+The **talker** program is a leightweight *websocket server* loosely connected to **Zenbot**.
 Some small modifications are necessary to the **lib/engine.js** program to get useful data from the system.
 The modifications are kept small to get a slim footprint into the program.
 
@@ -149,8 +149,8 @@ The data is delevered as beautified *JSON* data. Here are a some examples:
 >
 ```
 Before you use the *set* command, it is wise to perform a *get options* command to see which options are used.
-For each option you change, you will see the old and new values like this. Be aware that different strategies 
-have different options. Not all options are visible. That is part on purpose and part on availability.
+For each option you change, you will see the old and new values like this. The *undef* values simply means that
+the option is not used for the running strategy.
 ```
 > set period 10m
 
@@ -185,8 +185,10 @@ have different options. Not all options are visible. That is part on purpose and
             neutral_rate  =  undef  -->  undef
                    debug  =  undef  -->  undef
 ```  
+Be aware that different strategies 
+have different options. Not all options are visible. That is part on purpose and part on availability.
 
-For the **zentalk** program, you need to use the talking port.
+For the **zentalk** program, you need to use the listener port.
 When you start **Zenbot**, you will see the port anounced like this:
 ```
 Zen master is talking to you on port 3000
@@ -206,17 +208,18 @@ Be aware that you need to open the actual port on the firewall.
 ### zenout
 
 Basicly the **zenout** program delivers the same data as the **zentalk** program.
-The difference is the invocation and the form of the output which is *raw JSON*.
-It is invoke from the command line with host:port as parameters.
+The difference is the invocation but the the output *raw JSON* makes it more usable
+for other programs outside of **Zenbot**. The output goes to *stdout*.
+It is invoked from the command line with *host:port* as parameters.
 ```
 $ ./zenout.js -c localhost:3001
 ```
 However, to get something useful from the progran you need to subscribe to data
 ```
-$ ./zenout.js -c localhost:300 --sub lastTrade
+$ ./zenout.js -c localhost:3000 --sub lastTrade
 ```
 With this option you will get the last trade from *Zenbot*.
-It is possible to stop the client and start it again withot losing the subscription, meaning you can start it without a new subscription.
+It is possible to stop the client and start it again without losing the subscription, meaning you can start it without a new subscription.
 If you want to get another set of data, it is wise to unsubscribe the previous subscription. This can be done in one operation.
 ```
 ./zenout.js -c localhost:3001 --unsub lastTrade --sub period
@@ -243,7 +246,7 @@ When you start **Zenbot**, you will see this message:
 Zen master is talking to you on port 3000
 Zen master is listening to you on port  3001
 ```
-For the **zenmailer** and **zenxmpp**, you need to use the listening port. 
+For the **zenmailer** and **zenxmpp**, you need to use the talking port. 
 To invoke the programs, a command like this is used:
 ```
 ./zenmailer.js -c localhost:3000
@@ -257,6 +260,6 @@ Be aware that you need to open the actual port on the firewall.
 ### Final words
 
 These utilities are still in an early stage of development. The same warings that is given for **Zentalk**
-also applies to **The Zentalker concept**. The listening utilities are quite safe. These only distributes
+also applies to **The Zentalker Concept**. The listening utilities are quite safe. These only distributes
 data from **Zenbot**. The **zentalker** to the contrary, is able to change options that **Zenbot** operates with.
 That is also the purpose of the program. **You are warned!**
