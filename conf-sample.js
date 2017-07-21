@@ -1,5 +1,7 @@
 var c = module.exports = {}
-
+// TCP ports for use by "The Zentalker Concept"
+// Two ports are used, one for talking and one for listening
+c.talker_port_range = {min: 3000, max:3020,retrieve:2}
 // mongo configuration
 c.mongo = {}
 c.mongo.host = process.env.MONGODB_PORT_27017_TCP_ADDR || 'localhost'
