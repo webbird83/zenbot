@@ -97,8 +97,7 @@ module.exports = function container (get, set, clear) {
         var periods = get('db.periods')
 
         console.log('fetching pre-roll data:')
-        var zenbot_cmd = process.platform === 'win32' ? 'zenbot.bat' : 'zenbot.sh'; // Use 'win32' for 64 bit windows too
-        var backfiller = spawn(path.resolve(__dirname, '..', zenbot_cmd), ['backfill', so.selector, '--days', days])
+        var backfiller = spawn(path.resolve(__dirname, '..', 'zenbot.sh'), ['backfill', so.selector, '--days', days])
         backfiller.stdout.pipe(process.stdout)
         backfiller.stderr.pipe(process.stderr)
         backfiller.on('exit', function (code) {
@@ -122,7 +121,7 @@ module.exports = function container (get, set, clear) {
             get('db.trades').select(opts, function (err, trades) {
               if (err) throw err
               if (!trades.length) {
-                console.log('---------------------------- STARTING ' + so.mode.toUpperCase() + ' TRADING ----------------------------')
+                console.log('---------------------------- STARTING ' + so.mode.toUpperCase() + ' TRADING WITH "' + so.order_type + '" ORDERS ----------------------------')
                 if (so.mode === 'paper') {
                   console.log('!!! Paper mode enabled. No real trades are performed until you remove --paper from the startup command.')
                 }
@@ -155,36 +154,34 @@ module.exports = function container (get, set, clear) {
                     forwardScan()
                     setInterval(forwardScan, c.poll_trades)
                     readline.emitKeypressEvents(process.stdin)
-                    if (process.stdin.setRawMode) {
-                      process.stdin.setRawMode(true)
-                      process.stdin.on('keypress', function (key, info) {
-                        if (key === 'b' && !info.ctrl ) {
-                          engine.executeSignal('buy')
-                        }
-                        else if (key === 'B' && !info.ctrl) {
-                          engine.executeSignal('buy', null, null, false, true)
-                        }
-                        else if (key === 's' && !info.ctrl) {
-                          engine.executeSignal('sell')
-                        }
-                        else if (key === 'S' && !info.ctrl) {
-                          engine.executeSignal('sell', null, null, false, true)
-                        }
-                        else if ((key === 'c' || key === 'C') && !info.ctrl) {
-                          delete s.buy_order
-                          delete s.sell_order
-                        }
-                        else if ((key === 'm' || key === 'M') && !info.ctrl) {
-                          so.manual = !so.manual
-                          console.log('\nmanual mode: ' + (so.manual ? 'ON' : 'OFF') + '\n')
-                        }
-                        else if (info.name === 'c' && info.ctrl) {
-                          // @todo: cancel open orders before exit
-                          console.log()
-                          process.exit()
-                        }
-                      })
-                    }
+                    process.stdin.setRawMode(true)
+                    process.stdin.on('keypress', function (key, info) {
+                      if (key === 'b' && !info.ctrl ) {
+                        engine.executeSignal('buy')
+                      }
+                      else if (key === 'B' && !info.ctrl) {
+                        engine.executeSignal('buy', null, null, false, true)
+                      }
+                      else if (key === 's' && !info.ctrl) {
+                        engine.executeSignal('sell')
+                      }
+                      else if (key === 'S' && !info.ctrl) {
+                        engine.executeSignal('sell', null, null, false, true)
+                      }
+                      else if ((key === 'c' || key === 'C') && !info.ctrl) {
+                        delete s.buy_order
+                        delete s.sell_order
+                      }
+                      else if ((key === 'm' || key === 'M') && !info.ctrl) {
+                        so.manual = !so.manual
+                        console.log('\nmanual mode: ' + (so.manual ? 'ON' : 'OFF') + '\n')
+                      }
+                      else if (info.name === 'c' && info.ctrl) {
+                        // @todo: cancel open orders before exit
+                        console.log()
+                        process.exit()
+                      }
+                    })
                   })
                 })
                 return
@@ -245,6 +242,7 @@ module.exports = function container (get, set, clear) {
                   })
                 }
                 session.balance = b
+//console.log('\nTrade balance\n', b)
               }
               else {
                 session.balance = {
@@ -331,6 +329,7 @@ module.exports = function container (get, set, clear) {
                       console.error('\n' + moment().format('YYYY-MM-DD HH:mm:ss') + ' - error saving my_trade')
                       console.error(err)
                     }
+//console.log('\nTrade\n', period)
                   })
                 }
                 if (s.lookback.length > lookback_size) {

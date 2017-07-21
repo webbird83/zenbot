@@ -7,6 +7,7 @@
     "zenbot": "./zenbot.sh"
   },
   "dependencies": {
+    "autobahn": "^17.5.2",
     "bitfinex-api-node": "^1.0.1",
     "bitstamp": "^1.0.1",
     "bl": "^1.2.1",
@@ -25,10 +26,12 @@
     "moment": "^2.18.1",
     "mongodb": "^2.2.25",
     "node-uuid": "^1.4.8",
+    "node-xmpp-client": "^3.0.2",
     "node.bittrex.api": "^0.2.5",
     "number-abbreviate": "^2.0.0",
     "numbro": "git+https://github.com/carlos8f/numbro.git",
     "poloniex.js": "0.0.7",
+    "portastic": "^1.0.1",
     "pusher-js": "^4.1.0",
     "quadrigacx": "0.0.7",
     "run-parallel": "^1.1.6",
@@ -36,6 +39,7 @@
     "semver": "^5.3.0",
     "sosa_mongo": "^1.0.3",
     "timebucket": "^0.4.0",
+    "ws": "^3.0.0",
     "zero-fill": "^2.2.3"
   },
   "devDependencies": {
