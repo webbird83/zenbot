@@ -3,16 +3,21 @@
 **Zentalk** is a small set of programs that makes it easy to monitor and make use data from Zenbot without interupting its operation.
 Most notably this is the start options, trades, periods and a lot more. The most important parts are the **talker** program
 that enables *websockets* (*WS*) on **Zenbot** and some client programs to make use of the data from **Zenbot**.
-The programs are **zentalk**, **zenmailer**, **zenxmpp** and **zenout**. The first one is a fullblown *websocket* CLI program to inspect the data from **Zenbot**.
+The programs are **zentalk**, **zenmailer**, **zenxmpp** and **zenout**. 
+The first one is a fullblown *websocket* CLI program to inspect the data from **Zenbot**.
 The other programs are lightweight *websocket* streaming clients which can *subscribe* to data objects from **Zenbot** 
-for use in other programs.  With **zenout** as an example one can do some simple node programming to use the output as anything thinkable.
-Here are some examples:
+for use in other programs.  With **zenout** as an example one can do some simple node programming 
+to use the output for anything thinkable. Here are some examples:
 
  - a *messaging bot* which can send trading events
  - write data that later can be used for statistics or graphing
  - producing data for a web front end
+ - setting alarms based on prices or signal levels
  - and a lot of other stuff
 
+All this is done without changing anything with the **Zenbot** logic except the changes already done in *engine.js* 
+This small scale modifications do not interfere with the **Zenbot** program.
+Future features are done only by modification or making of new client programs.
 In the **zenmailer** and **zenxmpp** program, the commenting shows how to implement other types of messaging 
 (or other functions)
 
@@ -23,14 +28,12 @@ The **talker** program is a leightweight *websocket server* loosely connected to
 Some small modifications are necessary to the **lib/engine.js** program to get useful data from the system.
 The modifications are kept small to get a slim footprint into the program.
 
-A pair of ports are used, one listener port for **zentalk** and one talking (output) port for the
-**zenout**, **zenmailer** and **xenxmpp** programs
-The ports are automatically selected from free ports in a short range of ports, currently 3000 to 3020.
+A a single TCP port is for all the **Zentalk** programs.  This port is automatically selected 
+from free ports in a short range of ports, currently 3000 to 3020.
 By editing *conf.js* it is possible to modify the range to something more suitable.
-**Zentalk** is announcing the ports like this when you start the bot:
+**Zentalk** is announcing the port like this when you start the bot:
 ```
 Zen master is talking to you on port 3000
-Zen master is listening to you on port  3001
 ```
 To invoke the programs with a command like this (the example is for zenmailer):
 ```
@@ -50,7 +53,7 @@ The **zentalk** program connects to a TCP port has a comand line interface with 
 It has a help command to show the available commands. The help command gives this output:
 ```
 > help
-  Usage: get <object>
+  Usage: get <object> (or <show>)
     Objects are:
         who
         balance
@@ -185,19 +188,18 @@ the option is not used for the running strategy.
             neutral_rate  =  undef  -->  undef
                    debug  =  undef  -->  undef
 ```  
-Be aware that different strategies 
-have different options. Not all options are visible. That is part on purpose and part on availability.
+Be aware that different strategies have different options. Not all options are visible. 
+That is part on purpose and part on availability.
 
-For the **zentalk** program, you need to use the listener port.
+For the **zentalk** program, you need to use the TCP port.
 When you start **Zenbot**, you will see the port anounced like this:
 ```
 Zen master is talking to you on port 3000
-Zen master is listening to you on port  3001
 ```
 
 To invoke the programs, a command like this is used:
 ```
-./zentalk.js -c localhost:3001
+./zentalk.js -c localhost:3000
 ```
 The programs can also be used from a remote location like this:
 ```
@@ -212,17 +214,26 @@ The difference is the invocation but the the output *raw JSON* makes it more usa
 for other programs outside of **Zenbot**. The output goes to *stdout*.
 It is invoked from the command line with *host:port* as parameters.
 ```
-$ ./zenout.js -c localhost:3001
+$ ./zenout.js -c localhost:3000
 ```
 However, to get something useful from the progran you need to subscribe to data
 ```
 $ ./zenout.js -c localhost:3000 --sub lastTrade
 ```
 With this option you will get the last trade from *Zenbot*.
-It is possible to stop the client and start it again without losing the subscription, meaning you can start it without a new subscription.
-If you want to get another set of data, it is wise to unsubscribe the previous subscription. This can be done in one operation.
+It is possible to stop the client and start it again without losing the subscription, 
+meaning you can start it without a new subscription.
+If you want to get another set of data, it is wise to unsubscribe the previous subscription. 
+This can be done in one operation. At the moment it is possible to subscribe to *trades*
+and *period* data. The *period* data makes is possible to use the data for treatment
+with other programs. Graphics comes to mind
+
+(* --sub lastTrade* and * --sub period*)
 ```
-./zenout.js -c localhost:3001 --unsub lastTrade --sub period
+./zenout.js -c localhost:3000 --unsub lastTrade --sub lastTrade
+```
+```
+./zenout.js -c localhost:3000 --unsub lastTrade --sub period
 ```
 The programs can also be used from a remote location like this:
 ```
@@ -244,9 +255,8 @@ To use the programs, you need to connect to **Zenbot**.
 When you start **Zenbot**, you will see this message:
 ```
 Zen master is talking to you on port 3000
-Zen master is listening to you on port  3001
 ```
-For the **zenmailer** and **zenxmpp**, you need to use the talking port. 
+For the **zenmailer** and **zenxmpp**, you need to use the TCP port. 
 To invoke the programs, a command like this is used:
 ```
 ./zenmailer.js -c localhost:3000
