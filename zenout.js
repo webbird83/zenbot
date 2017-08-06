@@ -6,10 +6,13 @@
  */
 
 var program = require('commander')
+  , nodeCleanup = require('node-cleanup')
   , read = require('read')
   , events = require('events')
   , WebSocket = require('ws')
   , fs = require('fs')
+  , portastic = require('portastic')
+  , c = require('./conf')
 
 function appender(xs) {
   xs = xs || []
@@ -56,10 +59,7 @@ program
   .option('-b, --beautify', 'Beautify JSON output')
   .parse(process.argv)
 
-if (program.listen && program.connect) {
-  console.error('\033[33merror: use either --connect\033[39m')
-  process.exit(-1)
-} else if (program.connect) {
+if (program.connect) {
   var options = {}
   var cont = function () {
 
@@ -75,10 +75,12 @@ if (program.listen && program.connect) {
     if (program.unsub) options.unsub = program.unsub
     if (program.beautify) options.beautify = program.beautify
 
-    var headers = into({}, (program.header || []).map(function split(s) {
+    var headers = into({
+       clientname: "zenout",
+       clientpid: process.pid
+    }, (program.header || []).map(function split(s) {
       return splitOnce(':', s)
     }))
-
     if (program.auth) {
       headers.Authorization = 'Basic '+ new Buffer(program.auth).toString('base64')
     }
@@ -90,10 +92,25 @@ if (program.listen && program.connect) {
 
     options.headers = headers
     var ws = new WebSocket(connectUrl, options)
+    var key = ws._req._headers['sec-websocket-key']
 
     ws.on('open', function open() {
-      if (program.sub) ws.send('sub ' + program.sub)
-      if (program.unsub) ws.send('unsub ' + program.unsub)
+      if (program.sub) {
+        var msg =
+          {
+            "client": key,
+            "msg": "sub " + program.sub
+          }
+        ws.send(JSON.stringify(msg))
+      }
+      if (program.unsub) {
+        var msg =
+          {
+            "client": key,
+            "msg": "unsub " + program.sub
+          }
+        ws.send(JSON.stringify(msg))
+      }
     }).on('close', function close() {
       process.exit()
     }).on('error', function error(code, description) {
@@ -104,9 +121,23 @@ if (program.listen && program.connect) {
       //console.log(data)
     })
 
+    setTimeout(() => { /* Just to keep process running */ }, 1000000);
+
+    nodeCleanup(function(exitCode,signal) {
+      if (signal) {
+        console.log('Connection closed, signal ',signal, ' ', exitCode)
+      }
+      return false
+    })
+
     ws.on('close', function close() {
+      var msg =
+        {
+          "client": key,
+          "msg": "closing " + key
+        }
+      ws.send(JSON.stringify(msg))
       ws.close()
-      process.exit()
     })
   }
 
@@ -127,5 +158,22 @@ if (program.listen && program.connect) {
     cont()
   }
 } else {
-  program.help()
+
+  var portRange = c.talker_port_range
+  //var portRange = { min: 3000, max: 3020}
+  var range = []
+  for (p = portRange.min; p <= portRange.max; p++) {
+    range.push(p)
+  }
+/*
+  portastic.filter(range)
+    .then(function(ports){
+      for (var i = 0; i < ports.length; i++) {
+        range.splice(ports[i]-portRange.min)
+      }
+      //console.log('Zentalk ports you can connect to: ',range)
+      console.log('Invocation: ./zentalk.js -c localhost:' + range[0])
+    })
+*/
+  //program.help()
 }

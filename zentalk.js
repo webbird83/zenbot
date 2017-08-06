@@ -11,8 +11,11 @@
  */
 
 var program = require('commander')
+//  , ON_DEATH = require('death') // ({debug: true, SIGINT: true, SIGTERM: true})
+  , nodeCleanup = require('node-cleanup')
   , readline = require('readline')
   , read = require('read')
+  , colors = require('colors')
   , events = require('events')
   , WebSocket = require('ws')
   , util = require('util')
@@ -134,10 +137,7 @@ program
   .option('--passphrase [passphrase]', 'Specify a Client SSL Certificate Key\'s passphrase. If you don\'t provide a value, it will be prompted for.')
   .parse(process.argv)
 
-if (program.listen && program.connect) {
-  console.error('\033[33merror: use either --connect\033[39m')
-  process.exit(-1)
-} else if (program.connect) {
+if (program.connect) {
   var options = {}
   var cont = function () {
     var wsConsole = new Console()
@@ -151,10 +151,12 @@ if (program.listen && program.connect) {
     if (program.cert) options.cert = fs.readFileSync(program.cert)
     if (program.key) options.key = fs.readFileSync(program.key)
 
-    var headers = into({}, (program.header || []).map(function split(s) {
+    var headers = into({
+      clientname: "zentalk", 
+      clientpid: process.pid
+    }, (program.header || []).map(function split(s) {
       return splitOnce(':', s)
     }))
-
     if (program.auth) {
       headers.Authorization = 'Basic '+ new Buffer(program.auth).toString('base64')
     }
@@ -167,16 +169,22 @@ if (program.listen && program.connect) {
     options.headers = headers
     var ws = new WebSocket(connectUrl, options)
     var key = ws._req._headers['sec-websocket-key']
-console.log('Client ID: ', key)
+console.log('Client ID: ', key + ' Pid: ' + process.pid)
 
     ws.on('open', function open() {
-      wsConsole.print(Console.Types.Control, 'connected (press CTRL+C to quit)', Console.Colors.Green)
+      wsConsole.print(Console.Types.Control, 'connected (press CTRL+C to quit)', Console.Colors.Blue)
       wsConsole.on('line', function line(data) {
-        ws.send(data)
+        if (data.match(/closing/)) data = 'are you joking?'
+        var msg =
+          {
+            "client": key,
+            "msg": data
+          }
+        ws.send(JSON.stringify(msg))
         wsConsole.prompt()
       })
     }).on('close', function close() {
-      wsConsole.print(Console.Types.Control, 'disconnected', Console.Colors.Green)
+      wsConsole.print(Console.Types.Control, 'disconnected', Console.Colors.Blue)
       wsConsole.clear()
       process.exit()
     }).on('error', function error(code, description) {
@@ -185,10 +193,24 @@ console.log('Client ID: ', key)
     }).on('message', function message(data, flags) {
       wsConsole.print(Console.Types.Incoming, data, Console.Colors.Blue)
     })
+    
+    setTimeout(() => { /* Just to keep process running */ }, 1000000);
+
+    nodeCleanup(function(exitCode,signal) {
+      if (signal) {
+        console.log('Connection closed, signal ',signal, ' ', exitCode)
+      }
+      return false
+    })
 
     wsConsole.on('close', function close() {
+      var msg =
+        {
+          "client": key,
+          "msg": "closing " + key
+        }
+      ws.send(JSON.stringify(msg))
       ws.close()
-      process.exit()
     })
   }
 
