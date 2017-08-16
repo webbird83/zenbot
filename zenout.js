@@ -52,10 +52,13 @@ program
   .option('--key <key>', 'Specify a Client SSL Certificate\'s key.')
   .option('--passphrase [passphrase]', 'Specify a Client SSL Certificate Key\'s passphrase.'
      + '\n\t\t\t\t  If you don\'t provide a value, it will be prompted for.')
-  .option('--sub <object|object list>', 'Subscribes to a specific object or object list'
-     + '\n\t\t\t\t  (comma separated list with no space)')
-  .option('--unsub <object|object list>', 'Unsubscribes to a specific object or object list'
-     + '\n\t\t\t\t  (comma separated list with no space)')
+  .option('--sub <object>', 'Subscribes to a specific object'
+     + '\n\t\t\t\t  (Objects are: trades, periods, candles and signals)')
+  .option('--unsub <object>', 'Unsubscribes to a specific object')
+  .option('--rsi_hi <RSI value>', 'When the RSI value goes ABOVE this value, Zentalk will send an alertl')
+  .option('--rsi_lo <RSI value>', 'When the RSI value goes BELOW this value, Zentalk will send an alertl')
+  .option('--price_hi <price level>', 'When the price level goes ABOVE this level, Zentalk will send an alert')
+  .option('--price_lo <price level>', 'When the price level goes BELOW this level, Zentalk will send an alert')
   .option('-b, --beautify', 'Beautify JSON output')
   .parse(process.argv)
 
@@ -73,10 +76,16 @@ if (program.connect) {
     if (program.key) options.key = fs.readFileSync(program.key)
     if (program.sub) options.sub = program.sub
     if (program.unsub) options.unsub = program.unsub
+    if (program.rsi_hi) options.rsi_hi = program.rsi_hi
+    if (program.rsi_lo) options.rsi_lo = program.rsi_lo
+    if (program.price_hi) options.price_hi = program.price_hi
+    if (program.price_lo) options.price_lo = program.price_lo
     if (program.beautify) options.beautify = program.beautify
 
     var headers = into({
        clientname: "zenout",
+       clienttype: "stdout",
+       clientid: Math.floor(Math.random()*(99-11)+10), // Random number 10 to 99
        clientpid: process.pid
     }, (program.header || []).map(function split(s) {
       return splitOnce(':', s)
@@ -92,25 +101,35 @@ if (program.connect) {
 
     options.headers = headers
     var ws = new WebSocket(connectUrl, options)
-    var key = ws._req._headers['sec-websocket-key']
+    var wsKey = ws._req._headers['sec-websocket-key']
+    console.log('Client ID: ', wsKey + ' Pid: ' + process.pid)
 
     ws.on('open', function open() {
-      if (program.sub) {
-        var msg =
-          {
-            "client": key,
-            "msg": "sub " + program.sub
-          }
+      if (program.sub) { 
+        var msg = { "client": wsKey, "msg": "sub " + program.sub }
         ws.send(JSON.stringify(msg))
       }
-      if (program.unsub) {
-        var msg =
-          {
-            "client": key,
-            "msg": "unsub " + program.sub
-          }
+      if (program.unsub) { 
+        var msg = { "client": wsKey, "msg": "unsub " + program.sub }
         ws.send(JSON.stringify(msg))
       }
+      if (program.rsi_hi) {
+        var msg = { "client": wsKey, "msg": "alarm rsi_hi " + program.rsi_hi }
+        ws.send(JSON.stringify(msg))
+      }
+      if (program.rsi_lo) {
+        var msg = { "client": wsKey, "msg": "alarm rsi_lo " + program.rsi_lo }
+        ws.send(JSON.stringify(msg))
+      }
+      if (program.price_hi) {
+        var msg = { "client": wsKey, "msg": "alarm price_hi " + program.price_hi }
+        ws.send(JSON.stringify(msg))
+      }
+      if (program.price_lo) {
+        var msg = { "client": wsKey, "msg": "alarm price_lo " + program.price_lo }
+        ws.send(JSON.stringify(msg))
+      }
+
     }).on('close', function close() {
       process.exit()
     }).on('error', function error(code, description) {
@@ -126,6 +145,13 @@ if (program.connect) {
     nodeCleanup(function(exitCode,signal) {
       if (signal) {
         console.log('Connection closed, signal ',signal, ' ', exitCode)
+      var msg =
+        {
+          "client": wsKey,
+          "msg": "closing " + wsKey
+        }
+      ws.send(JSON.stringify(msg))
+      ws.close()
       }
       return false
     })
@@ -133,11 +159,12 @@ if (program.connect) {
     ws.on('close', function close() {
       var msg =
         {
-          "client": key,
-          "msg": "closing " + key
+          "client": wsKey,
+          "msg": "closing " + wsKey
         }
       ws.send(JSON.stringify(msg))
       ws.close()
+      process.exit(-1)
     })
   }
 

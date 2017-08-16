@@ -153,6 +153,8 @@ if (program.connect) {
 
     var headers = into({
       clientname: "zentalk", 
+      clienttype: "interactive",
+      clientid: Math.floor(Math.random()*(99-11)+10), // Random number 10 to 99
       clientpid: process.pid
     }, (program.header || []).map(function split(s) {
       return splitOnce(':', s)
@@ -168,8 +170,8 @@ if (program.connect) {
 
     options.headers = headers
     var ws = new WebSocket(connectUrl, options)
-    var key = ws._req._headers['sec-websocket-key']
-console.log('Client ID: ', key + ' Pid: ' + process.pid)
+    var wsKey = ws._req._headers['sec-websocket-key']
+    console.log('Client ID: ', wsKey + ' Pid: ' + process.pid)
 
     ws.on('open', function open() {
       wsConsole.print(Console.Types.Control, 'connected (press CTRL+C to quit)', Console.Colors.Blue)
@@ -177,7 +179,7 @@ console.log('Client ID: ', key + ' Pid: ' + process.pid)
         if (data.match(/closing/)) data = 'are you joking?'
         var msg =
           {
-            "client": key,
+            "client": wsKey,
             "msg": data
           }
         ws.send(JSON.stringify(msg))
@@ -206,8 +208,8 @@ console.log('Client ID: ', key + ' Pid: ' + process.pid)
     wsConsole.on('close', function close() {
       var msg =
         {
-          "client": key,
-          "msg": "closing " + key
+          "client": wsKey,
+          "msg": "closing " + wsKey
         }
       ws.send(JSON.stringify(msg))
       ws.close()

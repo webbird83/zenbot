@@ -84,6 +84,8 @@ if (program.connect) {
 
     var headers = into({
       clientname: "zenmailer",
+      clienttype: "mailclient",
+      clientid: Math.floor(Math.random()*(99-11)+10), // Random number 10 to 99
       clientpid: process.pid
     }, (program.header || []).map(function split(s) {
       return splitOnce(':', s)
@@ -99,13 +101,14 @@ if (program.connect) {
 
     options.headers = headers
     var ws = new WebSocket(connectUrl, options)
-    var key = ws._req._headers['sec-websocket-key']
+    var wsKey = ws._req._headers['sec-websocket-key']
+    console.log('Client ID: ', wsKey + ' Pid: ' + process.pid)
 
     ws.on('open', function open() {
       if (program.sub) {
         var msg = 
           {
-            "client": key,
+            "client": wsKey,
             "msg": "sub " + program.sub
           }
         ws.send(JSON.stringify(msg))
@@ -113,7 +116,7 @@ if (program.connect) {
       if (program.unsub) {
         var msg = 
           {
-            "client": key,
+            "client": wsKey,
             "msg": "unsub " + program.sub
           }
         ws.send(JSON.stringify(msg))
@@ -189,6 +192,13 @@ if (program.connect) {
     nodeCleanup(function(exitCode,signal) {
       if (signal) {
         console.log('Connection closed, signal ',signal, ' ', exitCode)
+      var msg =
+        {
+          "client": wsKey,
+          "msg": "closing " + wsKey
+        }
+      ws.send(JSON.stringify(msg))
+      ws.close()
       }
       return false
     })
@@ -196,11 +206,12 @@ if (program.connect) {
     ws.on('close', function close() {
       var msg =
         {
-          "client": key,
-          "msg": "closing " + key
+          "client": wsKey,
+          "msg": "closing " + wsKey
         }
       ws.send(JSON.stringify(msg))
       ws.close()
+      process.exit(-1)
     })
   }
 

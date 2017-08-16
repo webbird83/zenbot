@@ -61,10 +61,13 @@ program
   .option('--key <key>', 'Specify a Client SSL Certificate\'s key.')
   .option('--passphrase [passphrase]', 'Specify a Client SSL Certificate Key\'s passphrase.'
      + '\n\t\t\t\t  If you don\'t provide a value, it will be prompted for.')
-  .option('--sub <object|object list>', 'Subscribes to a specific object or object list'
-     + '\n\t\t\t\t  (comma separated list with no space)')
-  .option('--unsub <object|object list>', 'Unsubscribes to a specific object or object list'
-     + '\n\t\t\t\t  (comma separated list with no space)')
+  .option('--sub <object>', 'Subscribes to a specific object'
+     + '\n\t\t\t\t  (Objects are: trades, periods, candles and signals)')
+  .option('--unsub <object>', 'Unsubscribes to a specific object')
+  .option('--rsi_hi <RSI value>', 'When the RSI value goes ABOVE this value, Zentalk will send an alertl')
+  .option('--rsi_lo <RSI value>', 'When the RSI value goes BELOW this value, Zentalk will send an alertl')
+  .option('--price_hi <price level>', 'When the price level goes ABOVE this level, Zentalk will send an alert')
+  .option('--price_lo <price level>', 'When the price level goes BELOW this level, Zentalk will send an alert')
   .parse(process.argv)
 
 if (program.connect) {
@@ -81,9 +84,17 @@ if (program.connect) {
     if (program.key) options.key = fs.readFileSync(program.key)
     if (program.sub) options.sub = program.sub
     if (program.unsub) options.unsub = program.unsub
+    if (program.rsi_hi) options.rsi_hi = program.rsi_hi
+    if (program.rsi_lo) options.rsi_lo = program.rsi_lo
+    if (program.price_hi) options.price_hi = program.price_hi
+    if (program.price_lo) options.price_lo = program.price_lo
+
+    //const cid = Math.floor(Math.random()*(99-11)+10) // Random number 10 to 99
 
     var headers = into({
       clientname: "zenxmpp",
+      clienttype: "imclient",
+      clientid: Math.floor(Math.random()*(99-11)+10), // Random number 10 to 99
       clientpid: process.pid
     }, (program.header || []).map(function split(s) {
       return splitOnce(':', s)
@@ -99,100 +110,166 @@ if (program.connect) {
 
     options.headers = headers
     var ws = new WebSocket(connectUrl, options)
-    var key = ws._req._headers['sec-websocket-key']
+    var wsKey = ws._req._headers['sec-websocket-key']
+    console.log('Client ID: ' + headers.clientid, wsKey + ' Pid: ' + process.pid)
 
+    // Messages sent to the Zenbot server by talker.js
     ws.on('open', function open() {
+      // Ask for client short ID "cid"
       if (program.sub) {
-        var msg =
-          {
-            "client": key,
-            "msg": "sub " + program.sub
-          }
+        var msg = { "client": wsKey, "msg": "sub " + program.sub }
         ws.send(JSON.stringify(msg))
       }
       if (program.unsub) {
-        var msg =
-          {
-            "client": key,
-            "msg": "unsub " + program.sub
-          }
+        var msg = { "client": wsKey, "msg": "unsub " + program.unsub }
         ws.send(JSON.stringify(msg))
       }
+      if (program.rsi_hi) {
+        var msg = { "client": wsKey, "msg": "alarm rsi_hi " + program.rsi_hi }
+        ws.send(JSON.stringify(msg))
+      }
+      if (program.rsi_lo) {
+        var msg = { "client": wsKey, "msg": "alarm rsi_lo " + program.rsi_lo }
+        ws.send(JSON.stringify(msg))
+      }
+      if (program.price_hi) {
+        var msg = { "client": wsKey, "msg": "alarm price_hi " + program.price_hi }
+        ws.send(JSON.stringify(msg))
+      }
+      if (program.price_lo) {
+        var msg = { "client": wsKey, "msg": "alarm price_lo " + program.price_lo }
+        ws.send(JSON.stringify(msg))
+      }
+
+      setTimeout(() => {
+      // Make sure it is enought time to get answer
+      var msg = {"client": wsKey, "msg": "id"}
+        ws.send(JSON.stringify(msg))
+      },1000)
+
     }).on('close', function close() {
       process.exit()
     }).on('error', function error(code, description) {
       console.log(code + (description ? ' ' + description : ''))
       process.exit(-1)
-    }).on('message', function message(data, flags) {
-      var message = parseJson(data)
+    })
 
-      //=================================================================
-      // Start implementing messaging here
-      // Data from Zenbot is delivered in the
-      // "message" JSON object
-      //
-      // Require the modules,configuration 
-      // and template(s) you need for
-      // your messaging application
-      var Client = require('node-xmpp-client/index')
-        , cnf = require('./conf-zenxmpp')
-        , tp = require('./templates/zenmailer.tpl')
+    var Client = require('node-xmpp-client/index')
+      , cnf = require('./conf-zenxmpp')
+      , tp = require('./templates/zenmailer.tpl')
 
-      var client = new Client({ 
-        jid: cnf.clientId,
-        password: cnf.clientPasswd,
-        host: cnf.clientHost,
-        port: cnf.clientPort
-      })
+    var client = new Client({ 
+      jid: cnf.clientId,
+      password: cnf.clientPasswd,
+      host: cnf.clientHost,
+      port: cnf.clientPort,
+      reconnect: true,
+      autostart: true
+    })
 
-      client.connection.socket.on('error', function (error) {
-        console.error(error)
-        process.exit(1)
-      })
+    client.connection.socket.on('error', function (error) {
+      console.error(error)
+      process.exit(1)
+    })
 
-      client.on('error', function (err) {
-        console.error(err)
-        process.exit(1)
-      })
+    client.on('offline', function () {
+      console.log('Client is offline')
+    })
+    client.on('connect', function () {
+      console.log('Client is connected')
+    })
+    client.on('reconnect', function () {
+      console.log('Client reconnects …')
+    })
+    client.on('disconnect', function (e) {
+      console.log('Client is disconnected', client.connection.reconnect, e)
+    })
+    client.on('error', function (err) {
+      console.error(err)
+      process.exit(1)
+    })
 
-      var textMsg = ''
-      if (message) {
-        var msgText = message.lastTrade
-        //var msgText = data
-        msgText.exchange = msgText.selector.split('.')[0]
-        msgText.pair = msgText.selector.split('.')[1]
-        delete msgText.selector
-        var tpl = tp.template(msgText)
-        textMsg = tpl.plain
-        //console.log(data)
-      } else {
-        // Something wrong happened
-        textMsg = 'Something unusual happened to the trade!\n\n'
-        + 'Data returned: ' + data.toString()
-//        smtpOptions.html = '<b>Something unusual happened to the trade!</b><br><br>'
-//        + '<b>Data returned: ' + data.toString() + '</b>' // html body
+    client.on('stanza', function (stanza) {
+//      console.log('Received stanza: ',  stanza.toString())
+      if (stanza.is('message') && stanza.attrs.type === 'chat' && !stanza.getChild('delay')) {
+        var body = stanza.getChildText('body').toLowerCase()
+        var msg = {
+          "client": wsKey,
+          "msg": body
+        }
+        ws.send(JSON.stringify(msg))
+        console.log(msg)
       }
+    })
 
-      client.on('online', function (data) {
-        console.log('Connected as ' + data.jid.local + '@' + data.jid.domain + '/' + data.jid.resource)
-
+    // Start the Zentall server side client, waut for messages
+    client.on('online', function (data) {
+      console.log('Connected as ' + data.jid.local + '@' + data.jid.domain + '/' + data.jid.resource)
+      client.send('<presence/>')
+      
+      // Messages sent back to XMPP client
+      ws.on('message', function message(data, flags) {
+        var textMsg = ''
+        var json = parseJson(data)
+//console.log(data)
+        if (json) {
+          if (json.cid) {
+            cid = json.cid
+            textMsg = `Client ${json.cid}, ${json.selector} connected`
+//console.log('\naCID: ', json)
+          } else
+          if (json.alarm) {
+            textMsg = json.alarm
+          } else
+          if (json.trade) {
+            var msgText = json.trade
+            //var msgText = data
+            msgText.exchange = msgText.selector.split('.')[0]
+            msgText.pair = msgText.selector.split('.')[1]
+            delete msgText.selector
+            var tpl = tp.template(msgText)
+            textMsg = tpl.plain
+            //console.log(data)
+          } else 
+            textMsg = JSON.stringify(json,false,4)
+        } else {
+          // Something wrong happened
+          textMsg = data.toString()
+        }
         var stanza = new Client.Stanza('message', {
           to: cnf.receiver, type: 'chat'
-        }).c('body').t(textMsg)
+        })
+        stanza.c('body').t(textMsg)
         client.send(stanza)
-        client.end()
+//        client.end()
       })
+    })
+
+    //=================================================================
+    // Start implementing messaging here
+    // Data from Zenbot is delivered in the
+    // "message" JSON object
+    //
+    // Require the modules,configuration 
+    // and template(s) you need for
+    // your messaging application
 
       //
       // End of the messaging implementation
       //=================================================================
-    })
 
-    setTimeout(() => { /* Just to keep process running */ }, 1000000);
+//    setTimeout(() => { /* Just to keep process running */ }, 1000000);
 
     nodeCleanup(function(exitCode,signal) {
       if (signal) {
         console.log('Connection closed, signal ',signal, ' ', exitCode)
+      var msg =
+        {
+          "client": wsKey,
+          "msg": "closing " + wsKey
+        }
+      ws.send(JSON.stringify(msg))
+      ws.close()
       }
       return false
     })
@@ -200,11 +277,12 @@ if (program.connect) {
     ws.on('close', function close() {
       var msg =
         {
-          "client": key,
-          "msg": "closing " + key
+          "client": wsKey,
+          "msg": "closing " + wsKey
         }
       ws.send(JSON.stringify(msg))
       ws.close()
+      process.exit(-1)
     })
   }
 

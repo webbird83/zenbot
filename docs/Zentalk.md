@@ -1,12 +1,15 @@
 ## The Zentalk Concept
 
 **Zentalk** is a small set of programs that makes it easy to monitor and make use data from Zenbot without interupting its operation.
-Most notably this is the start options, trades, periods and a lot more. The most important parts are the **talker** program
+The start options, trades, periods and a lot more is available. The most important parts are the **talker** program
 that enables *websockets* (*WS*) on **Zenbot** and some client programs to make use of the data from **Zenbot**.
-The programs are **zentalk**, **zenmailer**, **zenxmpp** and **zenout**. 
-The first one is a fullblown *websocket* CLI program to inspect the data from **Zenbot**.
+The programs are **zentalk**, **zenmailer**, **zenxmpp**, **zenout** and **zenwho**. 
+The first one is a fullblown *websocket* interactive program to inspect and change the **Zenbot** internal data.
 The other programs are lightweight *websocket* streaming clients which can *subscribe* to data objects from **Zenbot** 
-for use in other programs.  With **zenout** as an example one can do some simple node programming 
+for use in other programs. With **zenxmpp** you can subscribe to **Zenbot** events like *trades*, *candles*, *periods* and *signals*. Further more you can set alarms to fire and receive with your xmpp client when *price* and *RSI* levels are
+above or below the levels of your choice. Learn more about alarms and subscriptions in the **zenxmpp** section further down.
+
+With **zenout** as an example one can do some simple node programming 
 to use the output for anything thinkable. Here are some examples:
 
  - a *messaging bot* which can send trading events
@@ -15,9 +18,9 @@ to use the output for anything thinkable. Here are some examples:
  - setting alarms based on prices or signal levels
  - and a lot of other stuff
 
-All this is done without changing anything with the **Zenbot** logic except the changes already done in *engine.js* 
+All this is done without changing anything with the **Zenbot** logic except some small changes done in *engine.js* 
 This small scale modifications do not interfere with the **Zenbot** program.
-Future features are done only by modification or making of new client programs.
+New features are made by modification or making of new client programs.
 In the **zenmailer** and **zenxmpp** program, the commenting shows how to implement other types of messaging 
 (or other functions)
 
@@ -25,23 +28,24 @@ In the **zenmailer** and **zenxmpp** program, the commenting shows how to implem
 ### talker
 
 The **talker** program is a leightweight *websocket server* loosely connected to **Zenbot**.
-Some small modifications are necessary to the **lib/engine.js** program to get useful data from the system.
-The modifications are kept small to get a slim footprint into the program.
+Some small modifications have been necessary to the **lib/engine.js** program to get useful data from the system.
+These modifications are kept small for **Zentalk** to have a slim footprint in **Zenbot**.
 
-A a single TCP port is for all the **Zentalk** programs.  This port is automatically selected 
-from free ports in a short range of ports, currently 3000 to 3020.
-By editing *conf.js* it is possible to modify the range to something more suitable.
+A a single TCP port is used for all the **Zentalk** programs.  This port is automatically selected 
+from free ports in a short range of ports, currently 3000 to 3020. That should be sufficient for most use cases.
+By editing *conf.js* it is possible to modify the range if the current range does not suit your needs.
+
 **Zentalk** is announcing the port like this when you start the bot:
 ```
 Zen master is talking to you on port 3000
 ```
-To invoke the programs with a command like this (the example is for zenmailer):
+The programs are invoked from the console like this (the example is for zenmailer):
 ```
 ./zenmailer.js -c localhost:3000
 ```
 If you open the required ports on the firewall you can also run the utilities from a remote location,
 either from outside or from your local network. Then you need to use the ip address of your **Zenbot**
-installation. Obviously you also need to copy the **Zentalker** programs and configuration/template 
+installation. Obviously you also need to copy the **Zentalk** client programs and configuration/template 
 files to your local computer. Then the invokation will be like this:
 ```
 ./zenmailer.js -c <ip_address_of_your_remote_server:remote_port>
@@ -49,25 +53,47 @@ files to your local computer. Then the invokation will be like this:
 
 ### zentalk
 
-The **zentalk** program connects to a TCP port has a comand line interface with a few simple commands to control its operation.
-It has a help command to show the available commands. The help command gives this output:
+The interactive **zentalk** program connects to a TCP port corresponding to your **zenbot** currency pair. 
+It has a comand line interface with a few simple commands to control its operation.
+A help command shows the available commands. The help command gives this output:
 ```
 > help
-  Usage: get <object> (or <show>)
-    Objects are:
-        who
-        balance
-        product
-        period
-        strat
-        quote
-        status
-        trades
-        modified (inspect the changes before "<commit>")
+  Usage: [ID] <command> [object] [value]
+    who (returns client ID)
+    id  (returns client ID)
+    <ID> get <object>
+    <ID> sub|unsub <event>
+    <ID> alarm <alarm> <value>
+    <ID> set <option> <value>
+    <ID> commit (commits changes)
 
-    set <option> (use "get options" to see the options)
+  Try "help" <get|sub|alarm|set|commit>
 
-    commit (commit changes done by "set <option>")
+  The <ID> (IM-client ID) is only used
+  when called from a IM client (zenxmpp)
+  Remove the <ID> from the command
+  when other clients are used
+>
+```
+Help for subscription example:
+```
+> help sub
+  <ID> sub|unsub <event>
+    Events are:
+      trades, candles, periods, signals
+
+  Example: "sub candles"
+  IM-client: "27 sub trades"
+>
+```
+Help for setting alarms:
+```
+> help alarm
+  <ID> alarm <event> <value>
+    Alarms are:
+      price_hi, price_lo, rsi_hi, rsi_lo
+
+  Example: "27 alarm rsi_hi 84"
 ```
 The data is delevered as beautified *JSON* data. Here are a some examples:
 ```
@@ -178,8 +204,6 @@ the option is not used for the running strategy.
               markup_pct  =      0  -->  0
               order_type  =  maker  -->  taker
              poll_trades  =  24000  -->  24000
-        currency_capital  =    400  -->  Only 'set' in paper mode!
-           asset_capital  =      0  -->  Only 'set' in paper mode!
              rsi_periods  =     14  -->  14
         avg_slippage_pct  =  0.045  -->  0.045
                    stats  =   true  -->  true
@@ -241,14 +265,14 @@ The programs can also be used from a remote location like this:
 ```
 Be aware that you need to open the actual port on the firewall.
 
-### zenmailer and zenxmpp
+### zenmailer
 
-As the names imply, these programs deliver messages when interesting events occur. In this version the programs
+As the name imply, this programs deliver messages when interesting events occur. In this version the program
 deliver trades with the trade specific data. A template file, ./templates/zenmailer.tpl is provided. 
 This template file has sections for plain text and HTML. For the *zenmailer.js* both the plain and HTML text are used.
-The template delivers messages with simple formatting. The template is ease to customize for more sexy messages
+The template delivers messages with simple formatting. The template is easy to customize for more sexy messages
 
-Before using the programs, the configuration files *conf-zenmailer.js* and *conf-zenxmpp.js* 
+Before using the program, the configuration files *conf-zenmailer.js* and *conf-zenxmpp.js* 
 have to be edited with your preferences.
 
 To use the programs, you need to connect to **Zenbot**. 
@@ -256,7 +280,7 @@ When you start **Zenbot**, you will see this message:
 ```
 Zen master is talking to you on port 3000
 ```
-For the **zenmailer** and **zenxmpp**, you need to use the TCP port. 
+For the **zenmailer**, you need to use the TCP port. 
 To invoke the programs, a command like this is used:
 ```
 ./zenmailer.js -c localhost:3000
@@ -267,9 +291,63 @@ The programs can also be used from a remote location like this:
 ```
 Be aware that you need to open the actual port on the firewall.
 
+### zenxmpp
+
+In addition to the functions available in **zenmailer**, the **zenxmpp** program can do a lot more. 
+Most important are *alarms* and *subscriptions*. 
+
+Before using the program, the configuration file *conf-zenxmpp.js* needs editing with your preferences
+for any practical uses.
+```javascript
+var c = module.exports = {}
+c.clientId = 'YOUR-CLIENT-ID',     // The XMPP ID for your zenxmpp client
+c.clientPasswd = 'YOUR-PASSWORD',  // Password for the same
+c.clientHost = 'YOUR-CLIENT-HOST', // The XMPP host you connect through (yax.im)
+c.clientPort = 5222,
+// Reciver XMPP ID
+c.receiver = 'RECEIVER-XMPP-ID'  // Your XMPP ID for your handheld (smartphone)
+```
+Your best options is to have two *XMPP* accounts, one for for your *zenxmpp* app and one for your (handheld) device.
+The fact that you can run several **zenbot** instances which use the same *XMPP* account, also require client tracking.
+This is achieved by giving each **zenxmpp** instance an ID, which is a random number between 10 and 99. 
+Thus it is also possible that two instances will get the same ID, but it is easy to just restart the **zenxmpp** client.
+When starting the **zenxmpp** program will announce itself to your (handheld) device. 
+At any time you can perform a *who* or *id* command to see which clients are active and get their client IDs.
+
+To get alarms and other events you can either give them as options to the command line or send them as commands
+from your XMPP client device. From the command line it will look like this:
+```
+./zenxmpp -c localhost:3000 --rsi_hi 85 --rsi_lo 20 --price_hi 320 --price_lo 270
+```
+Or to set the same alarm values from your handheld:
+```
+27 rsi_hi 85
+27 rsi_lo 20
+27 price_hi 320
+27 price_lo 27
+```
+
+### zenwho
+The **zenwho** is a helper program to easily find which TCP ports are used by the **talker.js** program,
+which is the server program the different **zental** programs you want to use.
+The output of the program is like this:
+```
+[me@zen work]$ ./zenwho.js 
+Connect-URL: ws://localhost:3000 --> Selector  bitstamp.BTC-USD
+Connect-URL: ws://localhost:3003 --> Selector  bitfinex.EOS-USD
+Connect-URL: ws://localhost:3001 --> Selector  bitfinex.ETH-USD
+Connect-URL: ws://localhost:3002 --> Selector  bitfinex.IOT-USD
+[me@zen work]$
+```
+Thus if you want to monitor ETH/USD on Bitfinex, you start the client like this:
+```
+./zenxmpp.js -c localhost:3001 (--other options)
+```
+
 ### Final words
 
-These utilities are still in an early stage of development. The same warings that is given for **Zentalk**
-also applies to **The Zentalker Concept**. The listening utilities are quite safe. These only distributes
-data from **Zenbot**. The **zentalker** to the contrary, is able to change options that **Zenbot** operates with.
-That is also the purpose of the program. **You are warned!**
+These utilities are still in an early stage of development. The same warnings given for **Zentalk**
+also applies to **The Zentalker Concept** in general. The listening utilities are quite safe. These only distributes
+data from **Zenbot**. The **zentalk** and **zenxmpp** programs to the contrary, are able to change options
+that control **Zenbot**. That is also the purpose of the programs. **You are warned!**
+
