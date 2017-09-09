@@ -104,7 +104,7 @@ let processOutput = output => {
   let vsBuyHoldRegexp  = /vs. buy hold: (-?\d+\.\d+)%/g;
   let wlRegexp      = /win\/loss: (\d+)\/(\d+)/g;
   let errRegexp     = /error rate: (.*)%/g;
-  let resultFileRegexp = /wrote (simulations.*html)/g;
+  let resultFileRegexp = /wrote simulations\/(.*html)/g;
 
   let output2 = output.substr(-3000);
 
