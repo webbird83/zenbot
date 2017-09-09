@@ -9,7 +9,7 @@
  * EMA Parameters: "trend_ema", "neutral_rate"
  * RSI Parameters: "oversold_rsi", "oversold_rsi_periods"
  *
- * Example: ./backtester.js gdax.ETH-USD --days=10 --currency_capital=5 --strategies=rsi,trend_ema
+ * Example: ./backtester.js gdax.ETH-USD --days=10 --currency_capital=5 --strategies rsi,trend_ema
 */
 
 let shell     = require('shelljs');
@@ -96,6 +96,8 @@ let runCommand = (strategyName, strategy, cb) => {
 };
 
 let processOutput = output => {
+  try {
+
   let jsonRegexp    = /(\{[\s\S]*?\})\send balance/g;
   let endBalRegexp  = /end balance: (\d+\.\d+) \(/g;
   let buyHoldRegexp  = /buy hold: (\d+\.\d+) \(/g;
@@ -104,7 +106,7 @@ let processOutput = output => {
   let errRegexp     = /error rate: (.*)%/g;
   let resultFileRegexp = /wrote (simulations.*html)/g;
 
-  let output2 = output.substr(output.length - 3000);
+  let output2 = output.substr(-3000);
 
   let rawParams     = jsonRegexp.exec(output2)[1];
   let params        = JSON.parse(rawParams);
@@ -198,6 +200,10 @@ let processOutput = output => {
     frequency:          roundp((wins + losses) / days, 3),
     strategyName:       params.strategy
   };
+  } catch (e) {
+    console.error(`\nERROR: Unable to process backtesting output: ${e}. removing value from output.`);
+    return null;
+  }
 };
 
 let strategies = {
