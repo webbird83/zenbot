@@ -5,10 +5,11 @@
  * 05/30/2017
  *
  * Usage: Pass in the same parameters as you would to "zenbot sim", EXCEPT for:
+ * Strategy: Use a comma-separated list of strategies in --strategies
  * EMA Parameters: "trend_ema", "neutral_rate"
  * RSI Parameters: "oversold_rsi", "oversold_rsi_periods"
  *
- * Example: ./backtester.js gdax.ETH-USD --days=10 --currency_capital=5
+ * Example: ./backtester.js gdax.ETH-USD --days=10 --currency_capital=5 --strategies=rsi,trend_ema
 */
 
 let shell     = require('shelljs');
@@ -69,7 +70,7 @@ let objectProduct = obj => {
   });
 };
 
-let runCommand = (strategy, cb) => {
+let runCommand = (strategyName, strategy, cb) => {
   countArr.push(1);
   let strategyArgs = {
     cci_srsi: `--cci_periods=${strategy.rsi_periods} --rsi_periods=${strategy.srsi_periods} --srsi_periods=${strategy.srsi_periods} --srsi_k=${strategy.srsi_k} --srsi_d=${strategy.srsi_d} --oversold_rsi=${strategy.oversold_rsi} --overbought_rsi=${strategy.overbought_rsi} --oversold_cci=${strategy.oversold_cci} --overbought_cci=${strategy.overbought_cci} --constant=${strategy.constant}`, 
@@ -81,8 +82,8 @@ let runCommand = (strategy, cb) => {
     trend_ema: `--trend_ema=${strategy.trend_ema} --oversold_rsi=${strategy.oversold_rsi} --oversold_rsi_periods=${strategy.oversold_rsi_periods} --neutral_rate=${strategy.neutral_rate}`
   };
   let zenbot_cmd = process.platform === 'win32' ? 'zenbot.bat' : './zenbot.sh'; // Use 'win32' for 64 bit windows too
-  let command = `${zenbot_cmd} sim ${simArgs} ${strategyArgs[strategyName]} --period=${strategy.period}  --min_periods=${strategy.min_periods}`;
-  console.log(`[ ${countArr.length}/${strategies[strategyName].length} ] ${command}`);
+  let command = `${zenbot_cmd} sim --strategy=${strategyName} ${simArgs} ${strategyArgs[strategyName]} --period=${strategy.period}  --min_periods=${strategy.min_periods}`;
+  console.log(`[ ${strategyName} ${countArr.length}/${strategies[strategyName].length} ] ${command}`);
 
   shell.exec(command, {silent:true, async:true}, (code, stdout, stderr) => {
     if (code) {
@@ -194,7 +195,8 @@ let processOutput = output => {
     min_periods:        params.min_periods,
     roi:                roi,
     wlRatio:            losses > 0 ? roundp(wins / losses, 3) : 'Infinity',
-    frequency:          roundp((wins + losses) / days, 3)
+    frequency:          roundp((wins + losses) / days, 3),
+    strategyName:       params.strategy
   };
 };
 
@@ -274,20 +276,26 @@ let args = process.argv;
 args.shift();
 args.shift();
 let simArgs = args.join(' ');
-let strategyName = 'trend_ema';
-if (args.indexOf('--strategy') !== -1) {
-  strategyName = args[args.indexOf('--strategy') + 1];
+let strategyNames = 'cci_srsi,srsi_macd,macd,rsi,sar,speed,trend_ema';
+if (args.indexOf('--strategies') !== -1) {
+  strategyNames = args[args.indexOf('--strategies') + 1];
 }
 
-let tasks = strategies[strategyName].map(strategy => {
-  return cb => {
-    runCommand(strategy, cb)
-  }
-});
+let tasks = [];
+let strategyNameList = strategyNames.split(',');
+for (var i = 0; i < strategyNameList.length; i++) {
+    let strategyName = strategyNameList[i];
+    let strategyTasks = strategies[strategyName].map(strategy => {
+      return cb => {
+        runCommand(strategyName, strategy, cb)
+      }
+    });
+    tasks = tasks.concat(strategyTasks);
+}
 
 console.log(`\n--==${VERSION}==--`);
 console.log(new Date().toUTCString());
-console.log(`\nBacktesting [${strategies[strategyName].length}] iterations for strategy ${strategyName}...\n`);
+console.log(`\nBacktesting [${tasks.length}] iterations for all strategies ${strategyNames}...\n`);
 
 parallel(tasks, PARALLEL_LIMIT, (err, results) => {
   console.log("\nBacktesting complete, saving results...");
@@ -296,30 +304,13 @@ parallel(tasks, PARALLEL_LIMIT, (err, results) => {
   })
   results.sort((a,b) => (a.roi < b.roi) ? 1 : ((b.roi < a.roi) ? -1 : 0));
   let fileName = `backtesting_${Math.round(+new Date()/1000)}.csv`;
-  let filedsGeneral = ['roi', 'vsBuyHold', 'errorRate', 'wlRatio', 'frequency', 'endBalance', 'buyHold', 'wins', 'losses', 'period', 'min_periods', 'days', 'resultFile'];
-  let filedNamesGeneral = ['ROI (%)', 'VS Buy Hold (%)', 'Error Rate (%)', 'Win/Loss Ratio', '# Trades/Day', 'Ending Balance ($)', 'Buy Hold ($)', '# Wins', '# Losses', 'Period', 'Min Periods', '# Days', 'Result Filename'];
-  let fields = {
-    cci_srsi: filedsGeneral.concat(['cciPeriods', 'rsiPeriods', 'srsiPeriods', 'srsiK', 'srsiD', 'oversoldRsi', 'overboughtRsi', 'oversoldCci', 'overboughtCci', 'Constant', 'params']), 
-    srsi_macd: filedsGeneral.concat(['rsiPeriods', 'srsiPeriods', 'srsiK', 'srsiD', 'oversoldRsi', 'overboughtRsi', 'emaShortPeriod', 'emaLongPeriod', 'signalPeriod', 'upTrendThreshold', 'downTrendThreshold', 'params']),
-    macd: filedsGeneral.concat([ 'emaShortPeriod', 'emaLongPeriod', 'signalPeriod', 'upTrendThreshold', 'downTrendThreshold', 'overboughtRsiPeriods', 'overboughtRsi', 'params']),
-    rsi: filedsGeneral.concat(['rsiPeriods', 'oversoldRsi', 'overboughtRsi', 'rsiRecover', 'rsiDrop', 'rsiDivsor', 'params']),
-    sar: filedsGeneral.concat(['sarAf', 'sarMaxAf', 'params']),
-    speed: filedsGeneral.concat(['baselinePeriods', 'triggerFactor', 'params']),
-    trend_ema: filedsGeneral.concat(['trendEma', 'neutralRate', 'oversoldRsiPeriods', 'oversoldRsi', 'params'])
-  };
-  let fieldNames = {
-    cci_srsi: filedNamesGeneral.concat(['CCI Periods', 'RSI Periods', 'SRSI Periods', 'SRSI K', 'SRSI D', 'Oversold RSI', 'Overbought RSI', 'Oversold CCI', 'Overbought CCI', 'Constant', 'Full Parameters']), 
-    srsi_macd: filedNamesGeneral.concat(['RSI Periods', 'SRSI Periods', 'SRSI K', 'SRSI D', 'Oversold RSI', 'Overbought RSI', 'EMA Short Period', 'EMA Long Period', 'Signal Period', 'Up Trend Threshold', 'Down Trend Threshold', 'Full Parameters']),
-    macd: filedNamesGeneral.concat(['EMA Short Period', 'EMA Long Period', 'Signal Period', 'Up Trend Threshold', 'Down Trend Threshold', 'Overbought Rsi Periods', 'Overbought Rsi', 'Full Parameters']),
-    rsi: filedNamesGeneral.concat(['RSI Periods', 'Oversold RSI', 'Overbought RSI', 'RSI Recover', 'RSI Drop', 'RSI Divisor', 'Full Parameters']),
-    sar: filedNamesGeneral.concat(['SAR AF', 'SAR MAX AF', 'Full Parameters']),
-    speed: filedNamesGeneral.concat(['Baseline Periods', 'Trigger Factor', 'Full Parameters']),
-    trend_ema: filedNamesGeneral.concat(['Trend EMA', 'Neutral Rate', 'Oversold RSI Periods', 'Oversold RSI', 'Full Parameters'])
-  };
+  let filedsGeneral = ['strategyName', 'roi', 'vsBuyHold', 'errorRate', 'wlRatio', 'frequency', 'endBalance', 'buyHold', 'wins', 'losses', 'period', 'min_periods', 'days', 'resultFile', 'params'];
+  let filedNamesGeneral = ['Strategy', 'ROI (%)', 'VS Buy Hold (%)', 'Error Rate (%)', 'Win/Loss Ratio', '# Trades/Day', 'Ending Balance ($)', 'Buy Hold ($)', '# Wins', '# Losses', 'Period', 'Min Periods', '# Days', 'Result Filename', 'Full Parameters'];
+  
   let csv = json2csv({
     data: results,
-    fields: fields[strategyName],
-    fieldNames: fieldNames[strategyName]
+    fields: filedsGeneral,
+    fieldNames: filedNamesGeneral
   });
 
   fs.writeFile(fileName, csv, err => {
