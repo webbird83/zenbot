@@ -261,10 +261,12 @@ path.middle, path.zero {
 }
 pre {
     font-size: 2em;
+    background-color: black;
 }
   </style>
 </head>
 <body>
+  <pre><code>{{output}}</pre></code>
   <div class="ticker-graph"></div>
   <script>
 /*! jQuery v3.0.0 | (c) jQuery Foundation | jquery.org/license */
@@ -512,6 +514,5 @@ var withData = function (data, trades) {
 {{code}}
 withData(data, trades)
   </script>
-  <pre><code>{{output}}</pre></code>
 </body>
 </html>
