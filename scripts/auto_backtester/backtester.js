@@ -101,6 +101,7 @@ let processOutput = output => {
   let vsBuyHoldRegexp  = /vs. buy hold: (-?\d+\.\d+)%/g;
   let wlRegexp      = /win\/loss: (\d+)\/(\d+)/g;
   let errRegexp     = /error rate: (.*)%/g;
+  let resultFileRegexp = /wrote (simulations.*html)/g;
 
   let output2 = output.substr(output.length - 3000);
 
@@ -111,6 +112,7 @@ let processOutput = output => {
   let vsBuyHold     = vsBuyHoldRegexp.exec(output2)[1];
   let wlMatch       = wlRegexp.exec(output2);
   let errMatch      = errRegexp.exec(output2);
+  let resultFile    = resultFileRegexp.exec(output2)[1];
   let wins          = wlMatch !== null ? parseInt(wlMatch[1]) : 0;
   let losses        = wlMatch !== null ? parseInt(wlMatch[2]) : 0;
   let errorRate     = errMatch !== null ? parseInt(errMatch[1]) : 0;
@@ -129,6 +131,7 @@ let processOutput = output => {
     wins:               wins,
     losses:             losses,
     errorRate:          parseFloat(errorRate),
+    resultFile:         resultFile,
 
     // cci_srsi
     cciPeriods:         params.cci_periods,
@@ -293,8 +296,8 @@ parallel(tasks, PARALLEL_LIMIT, (err, results) => {
   })
   results.sort((a,b) => (a.roi < b.roi) ? 1 : ((b.roi < a.roi) ? -1 : 0));
   let fileName = `backtesting_${Math.round(+new Date()/1000)}.csv`;
-  let filedsGeneral = ['roi', 'vsBuyHold', 'errorRate', 'wlRatio', 'frequency', 'endBalance', 'buyHold', 'wins', 'losses', 'period', 'min_periods', 'days'];
-  let filedNamesGeneral = ['ROI (%)', 'VS Buy Hold (%)', 'Error Rate (%)', 'Win/Loss Ratio', '# Trades/Day', 'Ending Balance ($)', 'Buy Hold ($)', '# Wins', '# Losses', 'Period', 'Min Periods', '# Days'];
+  let filedsGeneral = ['roi', 'vsBuyHold', 'errorRate', 'wlRatio', 'frequency', 'endBalance', 'buyHold', 'wins', 'losses', 'period', 'min_periods', 'days', 'resultFile'];
+  let filedNamesGeneral = ['ROI (%)', 'VS Buy Hold (%)', 'Error Rate (%)', 'Win/Loss Ratio', '# Trades/Day', 'Ending Balance ($)', 'Buy Hold ($)', '# Wins', '# Losses', 'Period', 'Min Periods', '# Days', 'Result Filename'];
   let fields = {
     cci_srsi: filedsGeneral.concat(['cciPeriods', 'rsiPeriods', 'srsiPeriods', 'srsiK', 'srsiD', 'oversoldRsi', 'overboughtRsi', 'oversoldCci', 'overboughtCci', 'Constant', 'params']), 
     srsi_macd: filedsGeneral.concat(['rsiPeriods', 'srsiPeriods', 'srsiK', 'srsiD', 'oversoldRsi', 'overboughtRsi', 'emaShortPeriod', 'emaLongPeriod', 'signalPeriod', 'upTrendThreshold', 'downTrendThreshold', 'params']),
