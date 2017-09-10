@@ -8,7 +8,7 @@
  * Output CSV filename: --output
  * Strategies as comma-separated list: --strategies
  *
- * Example: ./meta_backtester.js gdax.ETH-USD --days=10 --currency_capital=5 --strategy "trend_ema" --output testresults.csv strategies trend_ema,rsi,sar
+ * Example: ./meta_backtester.js gdax.ETH-USD --days=10 --currency_capital=5 --output testresults.csv strategies trend_ema,rsi,sar
 */
 
 let shell     = require('shelljs');

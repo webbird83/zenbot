@@ -98,7 +98,7 @@ let runCommand = (strategy, cb) => {
 let processOutput = output => {
   try {
 
-  let jsonRegexp    = /(\{[\s\S]*?\})\send balance/g;
+  let jsonRegexp    = /(\{[\s\S]*?\})\send balance/m;
   let endBalRegexp  = /end balance: (\d+\.\d+) \(/g;
   let buyHoldRegexp  = /buy hold: (\d+\.\d+) \(/g;
   let vsBuyHoldRegexp  = /vs. buy hold: (-?\d+\.\d+)%/g;
@@ -106,7 +106,7 @@ let processOutput = output => {
   let errRegexp     = /error rate: (.*)%/g;
   let resultFileRegexp = /wrote simulations\/(.*html)/g;
 
-  let output2 = output.substr(-3000);
+  let output2 = output;
 
   let rawParams     = jsonRegexp.exec(output2)[1];
   let params        = JSON.parse(rawParams);
@@ -308,7 +308,7 @@ parallel(tasks, PARALLEL_LIMIT, (err, results) => {
   })
   results.sort((a,b) => (a.roi < b.roi) ? 1 : ((b.roi < a.roi) ? -1 : 0));
   let filedsGeneral = ['strategyName', 'roi', 'vsBuyHold', 'errorRate', 'wlRatio', 'frequency', 'endBalance', 'buyHold', 'wins', 'losses', 'period', 'min_periods', 'days', 'resultFile'];
-  let filedNamesGeneral = ['Strategy', 'ROI (%)', 'VS Buy Hold (%)', 'Error Rate (%)', 'Win/Loss Ratio', '# Trades/Day', 'Ending Balance ($)', 'Buy Hold ($)', '# Wins', '# Losses', 'Period', 'Min Periods', '# Days', 'Result Filename'];
+  let filedNamesGeneral = ['Strategy', 'ROI (%)', 'VS Buy Hold (%)', 'Error Rate (%)', 'Win/Loss Ratio', '# Trades/Day', 'Ending Balance (CUR)', 'Buy Hold (CUR)', '# Wins', '# Losses', 'Period', 'Min Periods', '# Days', 'Result Filename'];
   let fields = {
     cci_srsi: filedsGeneral.concat(['cciPeriods', 'rsiPeriods', 'srsiPeriods', 'srsiK', 'srsiD', 'oversoldRsi', 'overboughtRsi', 'oversoldCci', 'overboughtCci', 'Constant', 'params']), 
     srsi_macd: filedsGeneral.concat(['rsiPeriods', 'srsiPeriods', 'srsiK', 'srsiD', 'oversoldRsi', 'overboughtRsi', 'emaShortPeriod', 'emaLongPeriod', 'signalPeriod', 'upTrendThreshold', 'downTrendThreshold', 'params']),
