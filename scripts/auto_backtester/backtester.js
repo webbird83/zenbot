@@ -36,6 +36,8 @@ let NEUTRAL_RATE_MAX = 10;
 
 let NEUTRAL_RATE_AUTO = false
 
+let resultFileName = `backtesting_${Math.round(+new Date()/1000)}.csv`;
+
 let countArr = [];
 
 let range = (start, end, step) => {
@@ -309,7 +311,6 @@ parallel(tasks, PARALLEL_LIMIT, (err, results) => {
     return !!r
   })
   results.sort((a,b) => (a.roi < b.roi) ? 1 : ((b.roi < a.roi) ? -1 : 0));
-  let fileName = `backtesting_${Math.round(+new Date()/1000)}.csv`;
   let filedsGeneral = ['strategyName', 'roi', 'vsBuyHold', 'errorRate', 'wlRatio', 'frequency', 'endBalance', 'buyHold', 'wins', 'losses', 'period', 'min_periods', 'days', 'resultFile', 'params'];
   let filedNamesGeneral = ['Strategy', 'ROI (%)', 'VS Buy Hold (%)', 'Error Rate (%)', 'Win/Loss Ratio', '# Trades/Day', 'Ending Balance ($)', 'Buy Hold ($)', '# Wins', '# Losses', 'Period', 'Min Periods', '# Days', 'Result Filename', 'Full Parameters'];
   
@@ -319,8 +320,8 @@ parallel(tasks, PARALLEL_LIMIT, (err, results) => {
     fieldNames: filedNamesGeneral
   });
 
-  fs.writeFile(fileName, csv, err => {
+  fs.writeFile(resultFileName, csv, err => {
     if (err) throw err;
-    console.log(`\nResults successfully saved to ${fileName}!\n`);
+    console.log(`\nResults successfully saved to ${resultFileName}!\n`);
   });
 });
