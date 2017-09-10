@@ -6,10 +6,11 @@
  *
  * Usage: Pass in the same parameters as you would to "zenbot sim", EXCEPT for:
  * Strategy: Use a comma-separated list of strategies in --strategies
+ * Output CSV filename: --output
  * EMA Parameters: "trend_ema", "neutral_rate"
  * RSI Parameters: "oversold_rsi", "oversold_rsi_periods"
  *
- * Example: ./backtester.js gdax.ETH-USD --days=10 --currency_capital=5 --strategies rsi,trend_ema
+ * Example: ./backtester.js gdax.ETH-USD --days=10 --currency_capital=5 --output testresults.csv --strategies rsi,trend_ema
 */
 
 let shell     = require('shelljs');
@@ -35,8 +36,6 @@ let NEUTRAL_RATE_MIN = 10;
 let NEUTRAL_RATE_MAX = 10;
 
 let NEUTRAL_RATE_AUTO = false
-
-let resultFileName = `backtesting_${Math.round(+new Date()/1000)}.csv`;
 
 let countArr = [];
 
@@ -287,6 +286,10 @@ let simArgs = args.join(' ');
 let strategyNames = 'cci_srsi,srsi_macd,macd,rsi,sar,speed,trend_ema';
 if (args.indexOf('--strategies') !== -1) {
   strategyNames = args[args.indexOf('--strategies') + 1];
+}
+let resultFileName = `backtesting_${strategyNames.replace(/,/g , "-")}_${Math.round(+new Date()/1000)}.csv`;
+if (args.indexOf('--output') !== -1) {
+  resultFileName = args[args.indexOf('--output') + 1];
 }
 
 let tasks = [];
