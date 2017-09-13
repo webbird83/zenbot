@@ -2,7 +2,7 @@
   {
     "asset": "BTC",
     "currency": "USD",
-    "min_size": "0.01",
+    "min_size": "0.005",
     "max_size": "2000.0",
     "increment": "0.0001",
     "label": "BTC/USD"
@@ -194,25 +194,25 @@
   {
     "asset": "EOS",
     "currency": "USD",
-    "min_size": "0.001",
+    "min_size": "0.01",
     "max_size": "50000.0",
-    "increment": "0.0001",
+    "increment": "0.0000001",
     "label": "EOS/USD"
   },
   {
     "asset": "EOS",
     "currency": "BTC",
-    "min_size": "0.001",
+    "min_size": "0.01",
     "max_size": "50000.0",
-    "increment": "0.0001",
+    "increment": "0.0000001",
     "label": "EOS/BTC"
   },
   {
     "asset": "EOS",
     "currency": "ETH",
-    "min_size": "0.001",
+    "min_size": "0.01",
     "max_size": "50000.0",
-    "increment": "0.0001",
+    "increment": "0.0000001",
     "label": "EOS/ETH"
   },
   {
@@ -262,5 +262,29 @@
     "max_size": "100000.0",
     "increment": "0.0001",
     "label": "OMG/ETH"
+  },
+  {
+    "asset": "BCH",
+    "currency": "USD",
+    "min_size": "0.001",
+    "max_size": "2000.0",
+    "increment": "0.0001",
+    "label": "BCH/USD"
+  },
+  {
+    "asset": "BCH",
+    "currency": "BTC",
+    "min_size": "0.001",
+    "max_size": "2000.0",
+    "increment": "0.0001",
+    "label": "BCH/BTC"
+  },
+  {
+    "asset": "BCH",
+    "currency": "ETH",
+    "min_size": "0.001",
+    "max_size": "2000.0",
+    "increment": "0.0001",
+    "label": "BCH/ETH"
   }
 ]
