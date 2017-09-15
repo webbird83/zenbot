@@ -145,7 +145,7 @@ if (program.connect) {
       // Make sure it is enought time to get answer
       var msg = {"client": wsKey, "msg": "id"}
         ws.send(JSON.stringify(msg))
-      },1000)
+      },10000)
 
     }).on('close', function close() {
       process.exit()
@@ -153,6 +153,8 @@ if (program.connect) {
       console.log(code + (description ? ' ' + description : ''))
       process.exit(-1)
     })
+
+    setTimeout(() => { /* Just to keep process running */ }, 1000000);
 
     var Client = require('node-xmpp-client/index')
       , cnf = require('./conf-zenxmpp')
@@ -166,6 +168,10 @@ if (program.connect) {
       reconnect: true,
       autostart: true
     })
+
+    // Make sure the XMPP server does leave the session open
+    client.connection.socket.setTimeout(0)
+    client.connection.socket.setKeepAlive(true, 10000)
 
     client.connection.socket.on('error', function (error) {
       console.error(error)
@@ -190,8 +196,8 @@ if (program.connect) {
     })
 
     client.on('stanza', function (stanza) {
-//      console.log('Received stanza: ',  stanza.toString())
-      if (stanza.is('message') && stanza.attrs.type === 'chat' && !stanza.getChild('delay')) {
+      console.log('Received stanza: ',  stanza.toString())
+      if (stanza.is('message') && stanza.attrs.type === 'chat' && !stanza.getChild('delay') && stanza.getChildText('body')) {
         var body = stanza.getChildText('body').toLowerCase()
         var msg = {
           "client": wsKey,
@@ -211,12 +217,12 @@ if (program.connect) {
       ws.on('message', function message(data, flags) {
         var textMsg = ''
         var json = parseJson(data)
-//console.log(data)
+console.log(data)
         if (json) {
           if (json.cid) {
             cid = json.cid
             textMsg = `Client ${json.cid}, ${json.selector} connected`
-//console.log('\naCID: ', json)
+console.log('\naCID: ', json)
           } else
           if (json.alarm) {
             textMsg = json.alarm
@@ -229,7 +235,7 @@ if (program.connect) {
             delete msgText.selector
             var tpl = tp.template(msgText)
             textMsg = tpl.plain
-            //console.log(data)
+            console.log(data)
           } else 
             textMsg = JSON.stringify(json,false,4)
         } else {
