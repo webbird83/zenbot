@@ -44,6 +44,7 @@ function parseJson(str) {
 
 var freshStart = true
 var who = {}
+var cid = ''
 
 program
 //  .version(version)
@@ -118,33 +119,33 @@ if (program.connect) {
       // Ask for client short ID "cid"
       if (program.sub) {
         var msg = { "client": wsKey, "msg": "sub " + program.sub }
-        ws.send(JSON.stringify(msg))
+        ws.send(cid + JSON.stringify(msg))
       }
       if (program.unsub) {
         var msg = { "client": wsKey, "msg": "unsub " + program.unsub }
-        ws.send(JSON.stringify(msg))
+        ws.send(cid + JSON.stringify(msg))
       }
       if (program.rsi_hi) {
         var msg = { "client": wsKey, "msg": "alarm rsi_hi " + program.rsi_hi }
-        ws.send(JSON.stringify(msg))
+        ws.send(cid + JSON.stringify(msg))
       }
       if (program.rsi_lo) {
         var msg = { "client": wsKey, "msg": "alarm rsi_lo " + program.rsi_lo }
-        ws.send(JSON.stringify(msg))
+        ws.send(cid + JSON.stringify(msg))
       }
       if (program.price_hi) {
         var msg = { "client": wsKey, "msg": "alarm price_hi " + program.price_hi }
-        ws.send(JSON.stringify(msg))
+        ws.send(cid + JSON.stringify(msg))
       }
       if (program.price_lo) {
         var msg = { "client": wsKey, "msg": "alarm price_lo " + program.price_lo }
-        ws.send(JSON.stringify(msg))
+        ws.send(cid + JSON.stringify(msg))
       }
 
       setTimeout(() => {
       // Make sure it is enought time to get answer
       var msg = {"client": wsKey, "msg": "id"}
-        ws.send(JSON.stringify(msg))
+        ws.send(cid + JSON.stringify(msg))
       },10000)
 
     }).on('close', function close() {
@@ -203,7 +204,7 @@ if (program.connect) {
           "client": wsKey,
           "msg": body
         }
-        ws.send(JSON.stringify(msg))
+        ws.send(cid + JSON.stringify(msg))
         console.log(msg)
       }
     })
@@ -216,11 +217,12 @@ if (program.connect) {
       // Messages sent back to XMPP client
       ws.on('message', function message(data, flags) {
         var textMsg = ''
+		var idResponse = /^([0-9]+)\s(\w+\.\w+\-\w+)\sconnected$/i.exec()
         var json = parseJson(data)
 console.log(data)
         if (json) {
           if (json.cid) {
-            cid = json.cid
+            cid = json.cid + ' '
             textMsg = `Client ${json.cid}, ${json.selector} connected`
 console.log('\naCID: ', json)
           } else
@@ -238,6 +240,11 @@ console.log('\naCID: ', json)
             console.log(data)
           } else 
             textMsg = JSON.stringify(json,false,4)
+        } else 
+		if (idResponse !== null) {
+		  // The result to an "id" command
+          cid = idResponse[0] + ' '
+          textMsg = data.toString()
         } else {
           // Something wrong happened
           textMsg = data.toString()
@@ -274,7 +281,7 @@ console.log('\naCID: ', json)
           "client": wsKey,
           "msg": "closing " + wsKey
         }
-      ws.send(JSON.stringify(msg))
+      ws.send(cid + JSON.stringify(msg))
       ws.close()
       }
       return false
@@ -286,7 +293,7 @@ console.log('\naCID: ', json)
           "client": wsKey,
           "msg": "closing " + wsKey
         }
-      ws.send(JSON.stringify(msg))
+      ws.send(cid + JSON.stringify(msg))
       ws.close()
       process.exit(-1)
     })
